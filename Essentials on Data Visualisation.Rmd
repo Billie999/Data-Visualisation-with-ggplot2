@@ -1,0 +1,304 @@
+---
+title: "Essentials on Data Visualisation with ggplot2"
+author: "Biljana Simonovikj"
+date: "20/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(mdsr)
+library(dplyr)
+```
+Basic template for visualisationis:
+ggplot(data = <DATA>) + <GEOM_FUNCTION> (mapping = aes(<MAPPINGS>)) where DATA should be replaced with the name of a dataset and MAPPINGS should be replaced with the desirable properties for the plot. Every geom_function in ggplot2 takes a mapping argument, which is always paired with aes() and defines how variables in the dataset <DATA> are mapped to visual properties. The arguments to aes() are called aesthetics (e.g. coordinates x and y) and the possibility to add multiple layers to a plot changing these aesthetics make ggplot2 graphing very versatile. Here is a list of some of the aesthetics that are understood by function geom_point:
+
+ - x (required): coordinate values along the horizontal axis
+ - y (required): coordinate values along the vertical axis
+ - alpha (optional): transparency
+ - colour (optional): colour
+ - fill (optional): filling
+ - shape (optional): shape of points
+ - size (optional): shape of points
+ 
+GEOM_FUNCTION should be replaced with a graph function. There is a variety of such functions available in the ggplot2 package. One of the most popular is geom_point(), which creates scatterplots. The operator +, adds an additional layer to the plot.
+
+```{r}
+ggplot2::mpg
+data = mpg
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy))
+```
+
+**Adjusting aesthetics**
+
+We can change the properties of the plot by adjusting these aesthetics. For instance, in the previous plot, displ and hwy stand respectively for engine displacement in litres and highway miles per gallon of the cars described in the rows of the dataset (points in the plot). If one believes that a good compromise between engine size and road economy can be measured by the product displ multiply hwy, after rescaling both variables to a common range (say, [0,1]), we can plot the size of the points proportional to this measure.
+```{r}
+hwy_rescaled = (mpg$hwy - min(mpg$hwy))/(max(mpg$hwy)-min(mpg$hwy)) # Rescaling hwy into [0,1]
+
+displ_rescaled = (mpg$displ-min(mpg$displ))/(max(mpg$displ)-min(mpg$displ)) # Same for displ
+
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, size = displ_rescaled*hwy_rescaled))
+```
+
+**Aditional simultaneous variables**
+
+We can visualise additional variables simultaneously by using additional aesthetics, in order to further explore the data. For instance, we include below the discrete variable cly, which stands for the number of cylinders in the car, as a transparency aesthetic (alpha).
+
+```{r}
+ggplot(data = mpg) +
+
+	geom_point(mapping = aes(x = displ, y = hwy, size = displ_rescaled*hwy_rescaled, alpha = cyl))
+```
+
+**Colour**
+
+Trying to understand the cars that stand out for having at the same time bigger engines and reasonable fuel efficiency (larger points) is a more interesting exercise. Following Wickham & Grolemund (2017), we can check if they belong to a specific category by adding car type (variable class in the mpg dataset) as an additional aesthetic. This time the aesthetic colour is used. Notice in this case that the size of the points was set manually to 4. An aesthetic can be set manually by setting its value outside aes().
+
+```{r}
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, colour = class), size = 4)
+```
+
+**Shape**
+
+Now let’s redo this visualisation using another aesthetic, shape. There are 25 different shapes that are supported in R (i.e., shape can be set manually to 0—24)).
+
+```{r}
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, shape = class, size = 4)) + scale_shape_manual(values = c(15, 16, 17, 3, 7, 8, 9))
+```
+
+**Jitter**
+
+One way of dealing with superposed points in ggplot2 is by “wiggling them around” a little bit so we can visualise their presence. This is achieved by setting argument position of geom_point() to “jitter”, which adds a small amount of random noise to points. While this is very useful to uncover replicates in the data, possibly unveiling high-density regions that might originally look like a single point, we have to be careful when interpreting and, specially, reporting such graphs, as they are technically not fully accurate.
+
+```{r}
+ggplot(data = mpg) + geom_point(mapping = aes(x = displ, y = hwy, 
+                                              size = displ_rescaled*hwy_rescaled, alpha = cyl), 
+                                                position = "jitter")
+```
+
+**Label and colour**
+
+In certain scenarios, a very visually appealing technique is the use of textual information. Function geom_text() is a function in ggplot2 that allows us to introduce textual information in a plot, in this case as an alternate aesthetic to shape. Combining text with other aesthetics, e.g., colour, in order to visualise different variables of the data, can produce interesting visualisations.
+
+```{r}
+ggplot(data = mpg) + geom_text(mapping = aes(x = displ, y = hwy, label = class, colour = cyl))
+```
+
+**Facets**
+
+An alternative to multiple aesthetics is the use of facets. Facets produce a collection of subfigures containing subsets of the dataset whose records have a common value for one or more discrete variable(s). Function facet_grid() can produce facets in a bi-dimensional grid where each dimension corresponds to a data variable. For instance, we can get facets for variables class and cly as before, or for any other discrete variable of the data, e.g., drv (f = front-wheel drive, r = rear wheel drive, 4 = 4wd). Let us see an example with class and drv in the vertical and horizontal dimensions of the grid, respectively:
+
+```{r}
+MyGraph <- ggplot(data = mpg) + geom_point(mapping = aes(x = displ,y = hwy), colour = "red", shape = 15)
+MyGraph + facet_grid(class ~ drv)
+```
+
+**One-dimensional panels**
+
+An alternative to avoid displaying these empty panels is to use a one-dimensional sequence of panels, each of which contains a particular combination of values for one or more discrete variables, which can be possibly “wrapped” into 2 dimensions.
+
+```{r}
+MyGraph + facet_wrap(c("class", "drv"), ncol = 4)
+```
+
+**Facet-wrap**
+
+We can produce facets for more than two variables using facet_wrap(), or just for one variable. For instance, the following code produces facets for variable trans (type of transmission).
+
+```{r}
+MyGraph + facet_wrap(c("trans"), nrow = 1)
+```
+
+We can also produce facets for a single variable using function facet_grid().
+
+```{r}
+MyGraph + facet_grid(. ~ trans)
+```
+
+Scatterplots are visualisations of points, which are one type of visual object (so-called geometric object, or geom) handled by the ggplot2 package. There are many other types of visual objects, which allow a variety of different plots to be produced. In the following, we discuss some of the most usual types of plots and how they can be handled using ggplot2. 
+
+**Fitted model**
+
+Let’s start with a type of plot that can be very handy in conjunction with scatterplots, which is a smooth plot obtained by fitting a model to the data. Fitting models to data is a topic studied under the realm of other subjects (e.g. linear and non-linear regression in statistics and machine learning); for now, we don’t have to worry about how these models are produced, as we only need the intuition for the sake of producing visualisations. Smooth plots can be obtained using function geom_smooth(). By default, for small datasets this function uses a so-called loess model that aims to capture the trend of the data.
+
+```{r}
+MyGraph + geom_smooth(mapping = aes(x = displ,y = hwy))
+```
+
+The blue line is the model fitted to the data, while the grey shadow is the confidence interval, a statistical measure related to the confidence about the corresponding fitted values (roughly speaking, the wider the interval the less confident we are about the fitted value in blue).
+
+
+**Linear model**
+
+We can force the model to be linear by setting the argument method of geom_smooth() to “lm”.
+
+```{r}
+MyGraph + geom_smooth(mapping = aes(x = displ,y = hwy), method = "lm", se = FALSE)
+```
+
+Notice that we have disabled the confidence interval shadow by setting argument se of geom_smooth() to FALSE.
+
+**Single geometric object across multiple data records**
+
+The aesthetic group is also understood by other functions of ggplot2 which, like geom_smooth(), handle a single geometric object across multiple data records/rows (a fitted model in our example). For such functions, grouping can also be automatically obtained by setting another aesthetic (e.g. colour) to a discrete variable. We can plot models for different subsets of the data by mapping the aesthetic group to a certain discrete variable of the data, for example drv.
+
+```{r}
+MyGraph + geom_smooth(mapping = aes(x = displ, y = hwy, group = drv), method = "lm", se = FALSE)
+```
+
+The effect is similar to that of facets, but the plots regarding different subsets of data are superposed on the same figure, rather than split into multiple subfigures. The result, however, is difficult to interpret, as we don’t know which model refers to which subset of the data. A first attempt to solve this issue can be made by mapping the aesthetic colour to variable drv.
+
+```{r}
+MyGraph + geom_smooth(mapping = aes(x = displ, y = hwy, colour = drv), method="lm", se=FALSE)
+```
+
+We get models plotted in different colours. This way, however, the grouping and colouring have been applied to the 2nd layer of the plot only, which contains the fitted models. The 1st layer, which we previously stored in object MyGraph and contains the scatterplot of red squares, is not affected, so we still don’t know which subset of data refers to each of the models. To solve this issue, there are different alternatives. The most obvious one is to replot the graph by also mapping the aesthetic colour to variable drv in the scatterplot displayed in the first layer.
+
+```{r}
+ggplot(data=mpg) + geom_point(mapping = aes(x = displ, y = hwy, colour = drv), shape = 15, size = 3) + geom_smooth(mapping = aes(x = displ, y = hwy, colour = drv), method = "lm", se = FALSE)
+```
+
+The result is now much easier to interpret. The code above is, however, unnecessarily complicated. In fact, notice that we are locally defining the very same collection of aesthetics (aes(x=displ, y=hwy, colour=drv)) to both layers of the graph. When the same aesthetics are needed across all the layers of a graph, it may be better to define them globally, rather than locally at each layer. This can be achieved by defining all the aesthetics a priori.
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, colour = drv)) + geom_point(shape = 15, size = 3) + geom_smooth(method = "lm", se = FALSE)
+```
+
+or, alternatively, by adding some aesthetics globally a posteriori.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + geom_point(shape = 15, size = 3) +
+geom_smooth(method = "lm", se = FALSE) + aes(colour = drv)
+```
+
+Both alternatives will produce the very same result.
+
+**Bar Charts and Bar Plots**
+
+CIACountries dataset, from the mdsr package (Baumer, Kaplan & Horton, 2017), contains geographic, demographic and economic (2014) data about 236 countries on a country-by-country basis. You can install the CIACountries dataset by using the following command:
+
+```{r, echo=T, results='hide'}
+mdsr::CIACountries
+```
+
+Bar charts are commonly used to display (using bars) counts, proportions or any other measure usually associated with the different values of a categorical or discrete numerical variable. Function geom_bar() from package ggplot2 can be used to produce a variety of different bar charts.
+
+One of the variables in the CIA dataset is net_users, which is a categorical variable describing discrete intervals for the fraction of internet users as % of population (factor with levels “>0%”, “>5%”, “>15%”, “>35%”, “>60%”, “NA”), where “NA” means that the information is not available for the corresponding country. We can plot a bar chart to visualise counts of how many countries fall within each of these categories.
+
+```{r}
+ggplot(data = CIACountries) + geom_bar(mapping = aes(x = net_users))
+```
+
+Rather than count of records in the y-axis, we may be interested to visualise another variable associated with each categorical value in the x-axis. As an example, let’s use function sample_n() (from packages dplyr, available as part of packages mdsr and tidyverse) in order to get a sample of the dataset CIACoutries, containing 25 out of the 236 original records.
+
+```{r}
+CIACountries_Sample <- sample_n(CIACountries, size = 25)
+```
+Since in this dataset each record corresponds to a country, this sample contains information about 25 randomly chosen countries. We may want to visualise a bar chart of population per country. This type of chart looks better if we reorder the countries (categorical variable country) by their population (numerical variable pop), which can be achieved by using function reorder().
+
+```{r}
+ordered_countries <- reorder(CIACountries_Sample$country, CIACountries_Sample$pop)
+G <- ggplot(data = CIACountries_Sample) + 
+						geom_bar(mapping = aes(x = ordered_countries, y = pop), stat = "identity") + coord_flip()
+```
+Notice that:
+
+ - we set the argument stat to “identity” (its default value in geom_bar is stat = “count”) to force ggplot2 to use the y aesthetic, which we mapped to variable pop (population);
+ - we flipped the coordinates (from vertical to horizontal bars) using function coord_flip();
+ - we assigned our graph to an object (that we named G), which in principle is not necessary if we just want to produce the visualisation.
+ 
+We did this on purpose to illustrate a powerful feature of ggplot2, the operator %+%. By using this operator, we keep all the visual properties previously configured for the object, but we change the dataset to which those properties are applied, so we can reproduce the same plot but for a different dataset, without having to rewrite the visualisation part of the code.
+
+```{r}
+CIACountries_Sample <- sample_n(CIACountries, size=25) # Another Sample
+
+ordered_countries <- reorder(CIACountries_Sample$country,CIACountries_Sample$pop)
+
+G <- G %+% CIACountries_Sample # Update the data mapped to graph G
+
+```
+
+Bar charts can be more elaborated than the ones we have seen so far. To illustrate, we will consider now dataset diamonds available in package ggplot2, which describes over 50,000 diamonds according to 10 variables. One of these variables is the diamond color, which takes categorical values from "J" (worst) to "D" (best). We can visualise the proportions of diamonds in these categories, now filling the bars with colours rather than in plain grey.
+
+```{r}
+ggplot2::diamonds
+ggplot(data = diamonds) + geom_bar(mapping = aes(x = color, fill = color))
+```
+
+Another categorical variable, cut, stands for the quality of the cut (“Fair”, “Good”, “Very Good”, “Premium”, “Ideal”). Using a stacked bar chart, we can visualise this variable as an additional aesthetic.
+
+```{r}
+ggplot(data = diamonds) + geom_bar(mapping = aes(x = color, fill = cut))
+```
+
+Technically, when we map argument fill to variable cut, geom_bar() internally produces counts separately for each value of cut and, by default, shows these counts in a stacked way. This allows us to visualise the proportions of each cut quality internally to each bar, i.e., for each diamond colour separately, but we cannot compare proportions across different bars as the bars have different heights. If we want to compare proportions of cuts (rather than absolute values) across different diamond colours, we have to change the default value of argument position from “stack” to “fill”.
+
+```{r}
+ggplot(data=diamonds) + geom_bar(mapping = aes(x = color, fill = cut), position = "fill")
+```
+
+Another option for argument position is dodge, which places the multiple bars side by side, rather than stacked.
+
+```{r}
+ggplot(data=diamonds) + geom_bar(mapping = aes(x = color, fill = cut), position="dodge")
+```
+
+Bar charts are useful when the variable on the x-axis is discrete. For real-valued (i.e. continuous) numerical variables, counts or proportions (frequencies) can be displayed by mapping the values to pre-defined intervals, called bins. This type of plot is called histogram. Histograms can be plotted used function geom_histogram() from ggplot2. For example, the following code plots a histogram for variable price of the diamonds dataset.
+
+```{r}
+ggplot(data = diamonds, mapping = aes(price)) + geom_histogram(binwidth = 200, colour = "black", fill = "white")
+```
+
+For the sake of a different example, let us refer back to the CIACountries data, and try to visualise a histogram for the size of the population in the different countries (variable pop). (Technically population is discrete, as it must be an integer, but there are so many possible values that for practical purposes it can be handled as continuous).
+
+```{r}
+ggplot(data = CIACountries, mapping = aes(pop)) + geom_histogram(bins = 50, colour = "black")
+```
+
+However, notice that, since there are a few countries with populations much larger than the majority (the short bars on the far right of the plot), the graph ends up squeezed and we lose definition on the left part, where most of the information sits. This problem is typically tackled by visualising the data in a log scale.
+
+```{r}
+ggplot(data = CIACountries, mapping = aes(pop)) + geom_histogram(bins = 50, colour = "black") + scale_x_log10()
+```
+
+Now, it becomes clear that, at the time the data was acquired, there was a higher concentration of countries with about 107 (10 million) inhabitants or so.
+
+**Density Plots**
+
+Another way of visualising the distribution of continuous numerical variables is by means of a density plot. These plots aim to show the distribution in a smooth rather than binned way, using density estimate techniques. The function geom_density() in the ggplot2 package typically does a very good job with default values for its arguments (Gaussian kernel with automatically adjusted bandwidth), while allowing advanced users who are familiar with density estimates to set them manually if desired. However, now let us use a density plot instead of a histogram for CIACountries dataset.
+
+```{r}
+d1 <- ggplot(data = CIACountries, mapping = aes(pop)) + geom_density() + scale_x_log10()
+d2 <- ggplot(data = CIACountries, mapping = aes(pop)) + geom_density(adjust = 2) + scale_x_log10()
+d3 <- ggplot(data = CIACountries, mapping = aes(pop)) + geom_density(adjust = 0.2) + scale_x_log10()
+grid.arrange(d1, d2, d3)
+```
+
+Notice that even rookies in density estimates can take advantage of argument adjust to control the trade-off between smoothness and contrast, while still relying on the (automatic) default setting as a reference. For example, setting adjust = 2 makes the default bandwidth value twice as big (middle subfigure), whereas adjust = 0.2 makes it 5 times smaller.
+
+**Visualising certain variables**
+
+Sometimes we want to visualise how the distribution of a certain numerical variable looks like not with respect to the whole data, but separately for each subset of records that have a common value for another (discrete, typically categorical) variable. Possibly the most common such graphs are called box-and-whiskers plots (or box plots for short). In ggplot2 these plots look like Figure 1. It shows a box with a line indicating the value that separates the data records in half (median, or 2nd quartile). The bottom of the box, so-called lower hinge, indicates the value that separates the 25 per cent smaller values from the 75 per cent larger values (25th percentile, or 1st quartile), while the top of the box, so-called upper hinge, indicates the value that separates the 75 per cent smaller values from the 25 per cent larger values (75th percentile, or 3rd quartile). There are also two 'whiskers', whose length may coincide with other percentiles of the data (e.g. 10th and 90th, depending on the plot function and settings used), as well as outliers, which are extreme values beyond the limits established by the whiskers.
+
+```{r, pressure, echo=FALSE, fig.cap="Fig 1: Characteristics of a box plot", out.width = '50%'}
+knitr::include_graphics("/Users/Biljana/Datasets/FDS_Week 3.jpg")
+```
+
+In ggplot2, this type of plot can be produced using function geom_boxplot(). The length of the whiskers are automatically set, but can optionally be adjusted using argument coef. For the sake of illustration, let’s consider the diamonds data set once again. In the following simple command, we produce a box plot with the distributions of diamond weights (variable carat) across diamonds of different colours (variable color).
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = color, y = carat)) + geom_boxplot()
+```
+
+To illustrate the power of ggplot2 to work with superposed layers of plots, the following command increments the previous figure by:
+
+ - Changing the colour and shape of the outliers in the box plot
+ - Superposing a layer with all the values themselves plotted in transparent (alpha = 0.05) blue points, using function geom_jitter().
+ 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = clarity, y = carat)) + 
+      geom_boxplot(outlier.color = "red", outlier.shape = 3) + 
+        geom_jitter(width = 0.1, alpha = 0.05, color = "blue")
+```
+ 
+ 
